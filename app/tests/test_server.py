@@ -1,0 +1,42 @@
+import io
+import zipfile
+import time
+import unittest
+from app.tests.test_base import BaseTestCase
+
+class TestServerAPI(BaseTestCase):
+    def test_async_upload_and_polling_lifecycle(self):
+        zip_buffer=io.BytesIO()
+        with zipfile.ZipFile(zip_buffer,'w',zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr("nested/firmware.bin","Data string containing <Tkn777XXXXXTkn> twice <Tkn777XXXXXTkn>")
+        zip_buffer.seek(0)
+
+        response=self.client.post(
+            '/analyze',
+            data={'file': (zip_buffer, 'firmware.zip')},
+            content_type='multipart/form-data'
+        )
+        
+        self.assertEqual(response.status_code,202)
+        data=response.get_json()
+        self.assertIn("job_id", data)
+        
+        poll_url=data["poll_url"]
+        status_data ={}
+        for _ in range(10):
+            poll_response =self.client.get(poll_url)
+            self.assertEqual(poll_response.status_code,200)
+            status_data=poll_response.get_json()
+            if status_data.get("status") in ["completed","failed"]:
+                break
+            time.sleep(0.2)
+
+        self.assertEqual(status_data.get("status"),"completed")
+        self.assertEqual(status_data["results"].get("<Tkn777XXXXXTkn>"),2)
+
+    def test_polling_missing_job_returns_404(self):
+        response = self.client.get('/results/invalid-job-uuid-123')
+        self.assertEqual(response.status_code, 404)
+
+if __name__ == '__main__':
+    unittest.main()
