@@ -65,7 +65,7 @@ class FirmwareService:
         finally:
             self._cleanup_files(zip_path, extract_dir)
 
-    def _cleanup_files(self, zip_path: str, extract_dir: str):
+    def _cleanup_files(self, zip_path:str,extract_dir:str):
         if os.path.exists(zip_path):
             os.remove(zip_path)
         if os.path.exists(extract_dir):
@@ -73,5 +73,5 @@ class FirmwareService:
 
 
 
-firmware_service = FirmwareService()
+firmware_service=FirmwareService()
 
